@@ -14,6 +14,7 @@ ENTITY picoblaze_spi IS
       spi_interrupt : IN STD_LOGIC;
       rx_buf_addr : OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
       rx_buf_data : OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+      rx_buf_data_loopback : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
       rx_buf_we : OUT STD_LOGIC;
       tx_buf_addr : OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
       tx_buf_data : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
@@ -27,7 +28,7 @@ END picoblaze_spi;
 
 ARCHITECTURE Behavioral OF picoblaze_spi IS
 
-  SIGNAL led2 : STD_LOGIC_VECTOR(7 DOWNTO 0);
+  --SIGNAL led2 : STD_LOGIC_VECTOR(7 DOWNTO 0);
 
   ---------------------------------------
   -- PicoBlaze State Machine Component
@@ -164,6 +165,8 @@ ARCHITECTURE Behavioral OF picoblaze_spi IS
 
   CONSTANT tx_buffer_ready_pid : STD_LOGIC_VECTOR(7 DOWNTO 0) := X"05";
 
+  CONSTANT rx_buf_data_loopback_pid : STD_LOGIC_VECTOR(7 DOWNTO 0) := X"06";
+
 
 BEGIN
 
@@ -171,9 +174,6 @@ BEGIN
   interrupt <= tx_buffer_ready OR NOT spi_interrupt;
 
   system_reset <= reset;
-
-  --led <= "0000000" & wb_to_pb_irq;
-
 
   -- Interrupt to wishbone master signaling the availability of received data
   -- Reset by wishbone master
@@ -268,6 +268,9 @@ BEGIN
         WHEN spi_interrupt_pid =>
           in_port <= "0000000" & NOT spi_interrupt;
 
+        WHEN rx_buf_data_loopback_pid =>
+          in_port <= rx_buf_data_loopback;
+
         WHEN tx_buf_data_pid =>
           in_port <= tx_buf_data;
 
@@ -284,7 +287,7 @@ BEGIN
   output_ports: PROCESS(clk, system_reset)
   BEGIN
     IF(system_reset = '1') THEN
-      led <= X"00";
+      led(6 DOWNTO 0) <= "0000000";
       --led2 <= X"00";
     ELSIF(RISING_EDGE(clk)) THEN
       CASE port_id IS
